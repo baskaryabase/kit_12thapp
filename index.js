@@ -5,7 +5,8 @@ var express           = require("express"),
     plm               = require("passport-local-mongoose"),
     mongoose          = require("mongoose"),
     LocalStrategy     = require("passport-local"),
-    bodyParser        = require("body-parser");
+    bodyParser        = require("body-parser"),
+    flash             = require("connect-flash");
 
 
 
@@ -25,6 +26,36 @@ app.use(express.static("public"));
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+//session COOKIES
+app.use(function (req, res, next) {
+if (req.method == 'POST' && req.url == '/login') {
+    if (req.body.remember_me) {
+    req.session.cookie.maxAge = 1000 * 60 * 3;
+  } else {
+    req.session.cookie.expires = false;
+  }
+}
+next();
+});
+
+//express session
+app.use(require("express-session")({
+  secret:"Secret!!! Yarkittayum Solla Koodathuu",
+  resave: false,
+  saveUninitialized: false
+}));
+
+
+//connect flash
+app.use(flash());
+
+app.use(function(req, res, next){
+    res.locals.currentUser = req.user;
+    res.locals.success = req.flash('success');
+    res.locals.error = req.flash('error');
+    next();
+});
 
 // user schema
 var UserSchema = mongoose.Schema({
@@ -82,11 +113,18 @@ var  username = req.body.username,
        phonenumber: number
       }),
       req.body.password,function(err,user){
+        if(err){
+          req.flash('error',err.message);
+          res.redirect("/register");
+          console.log(err);
+        }else{
       passport.authenticate("local")(req,res,function(){
          console.log(user);
-           // req.flash('success','You are Registered and now can LogIn');
+          req.flash('success','You are Registered and now can LogIn');
           res.redirect("/");
-});
+
+             });
+          }
 });
 });
 
