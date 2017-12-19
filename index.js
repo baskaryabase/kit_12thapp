@@ -21,42 +21,6 @@ mongoose.connect(DB_URL, {
 });
 
 
-
-app.set("view engine","ejs");
-app.use(express.static("public"));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-
-//express session
-app.use(require("express-session")({
-  secret:"Secret!!! Yarkittayum Solla Koodathuu",
-  resave: false,
-  saveUninitialized: false
-}));
-
-app.use(function (req, res, next) {
-if (req.method == 'POST' && req.url == '/login') {
-    if (req.body.remember_me) {
-    req.session.cookie.maxAge = 1000 * 60 * 3;
-  } else {
-    req.session.cookie.expires = false;
-  }
-}
-next();
-});
-
-//connect flash
-app.use(flash());
-
-app.use(function(req, res, next){
-    res.locals.currentUser = req.user;
-    res.locals.success = req.flash('success');
-    res.locals.error = req.flash('error');
-    next();
-});
-
 // user schema
 var UserSchema = mongoose.Schema({
     username: {
@@ -78,17 +42,40 @@ UserSchema.plugin(plm);
 
 var User = mongoose.model("User", UserSchema);
 
+
+
+app.set("view engine","ejs");
+app.use(express.static("public"));
+app.use(bodyParser.urlencoded({ extended: false }));
+
+//express session
+app.use(require("express-session")({
+  secret:"Secret!!! Yarkittayum Solla Koodathuu",
+  resave: false,
+  saveUninitialized: false
+}));
+
+
+app.use(passport.initialize());
+app.use(passport.session());
+
 // SERIALIZE AND DESERIALIZE USER
 
 passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-app.use(require("express-session")({
-    secret: "Once again Rusty wins cutest dog!",
-    resave: false,
-    saveUninitialized: false
-}));
+
+//connect flash
+app.use(flash());
+
+app.use(function(req, res, next){
+    res.locals.currentUser = req.user;
+    res.locals.success = req.flash('success');
+    res.locals.error = req.flash('error');
+    next();
+});
+
 // get routes
 app.get("/",function(req,res){
   res.render("index");
@@ -159,6 +146,17 @@ function isLoggedIn(req,res,next){
            res.redirect("/");
        }
 }
+
+app.use(function (req, res, next) {
+if (req.method == 'POST' && req.url == '/login') {
+    if (req.body.remember_me) {
+    req.session.cookie.maxAge = 1000 * 60 * 3;
+  } else {
+    req.session.cookie.expires = false;
+  }
+}
+next();
+});
 
 app.listen(8080,()=>{
   console.log("server started at port 8080")
