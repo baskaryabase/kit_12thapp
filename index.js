@@ -6,7 +6,9 @@ var express           = require("express"),
     mongoose          = require("mongoose"),
     LocalStrategy     = require("passport-local"),
     bodyParser        = require("body-parser"),
-    flash             = require("connect-flash");
+    flash             = require("connect-flash"),
+    cookieParser      = require("cookie-parser");
+
 
 
 
@@ -27,7 +29,13 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
-//session COOKIES
+//express session
+app.use(require("express-session")({
+  secret:"Secret!!! Yarkittayum Solla Koodathuu",
+  resave: false,
+  saveUninitialized: false
+}));
+
 app.use(function (req, res, next) {
 if (req.method == 'POST' && req.url == '/login') {
     if (req.body.remember_me) {
@@ -38,14 +46,6 @@ if (req.method == 'POST' && req.url == '/login') {
 }
 next();
 });
-
-//express session
-app.use(require("express-session")({
-  secret:"Secret!!! Yarkittayum Solla Koodathuu",
-  resave: false,
-  saveUninitialized: false
-}));
-
 
 //connect flash
 app.use(flash());
@@ -79,16 +79,16 @@ UserSchema.plugin(plm);
 var User = mongoose.model("User", UserSchema);
 
 // SERIALIZE AND DESERIALIZE USER
+
+passport.use(new LocalStrategy(User.authenticate()));
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 app.use(require("express-session")({
     secret: "Once again Rusty wins cutest dog!",
     resave: false,
     saveUninitialized: false
 }));
-passport.use(new LocalStrategy(User.authenticate()));
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-
 // get routes
 app.get("/",function(req,res){
   res.render("index");
@@ -96,6 +96,10 @@ app.get("/",function(req,res){
 
 app.get("/register",function(req,res){
   res.render("register");
+})
+
+app.get('/home', isLoggedIn , function (req, res) {
+  res.render("landingpage");
 })
 
 // // post routes
@@ -114,7 +118,7 @@ var  username = req.body.username,
       }),
       req.body.password,function(err,user){
         if(err){
-          req.flash('error',err.message);
+          req.flash('error',err.message );
           res.redirect("/register");
           console.log(err);
         }else{
@@ -128,7 +132,33 @@ var  username = req.body.username,
 });
 });
 
+// USER LOGIN
+app.post("/login",passport.authenticate("local",{
+    successRedirect: "/home",
+    failureRedirect: "/",
+    failureFlash: 'Incorrect Username or Password!',
+    successFlash: 'Successfully LoggedIn '
+}),function(req,res){
 
+});
+
+// LOGOUT
+app.get("/logout",function(req,res){
+    req.logout();
+    req.flash('success','You are now LoggedOut')
+    res.redirect("/");
+});
+
+// ISLOGGEDIN FUCTION
+function isLoggedIn(req,res,next){
+    if(req.isAuthenticated()){
+       return next();
+       }else {
+           console.log(req.isAuthenticated());
+           req.flash('error', 'You must LogIn first');
+           res.redirect("/");
+       }
+}
 
 app.listen(8080,()=>{
   console.log("server started at port 8080")
